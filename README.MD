@@ -127,6 +127,10 @@ docker pull grafana/grafana
 ```
 **2. Run Aeron Media Driver, Prometheus, Aeron-prometheus-stats and grafphana**
 
+**Aeron Media Driver**
+
+Run aeron media drivers, publisher and subcribers. [Link](https://github.com/real-logic/aeron)
+
 **Aeron-prometheus-stats**
 
 ```$xslt
@@ -153,6 +157,14 @@ docker run \
   --user 1000 \
   grafana/grafana
 ```
+
+Navigate to [localhost:3000](http://localhost:3000)
+
+User:admin
+
+pass:admin
+
+Then navigate to aeron-prometheus-stats dashboard.
 
 ![alt text](https://raw.githubusercontent.com/fairtide/aeron-prometheus-stat/develop/examples/Screenshots/GrafanaExample.png)
 
