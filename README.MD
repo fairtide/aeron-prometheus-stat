@@ -112,7 +112,7 @@ metric | description
 |num_clients|received packets|
 
 
-###Example with prometheus and grafphana
+### Example with prometheus and grafphana
 
 **1. Get the docker images**
 
