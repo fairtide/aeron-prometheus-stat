@@ -1,6 +1,6 @@
 version: '3'
 services:
-    test:
+    prometheus-aeron:
         image: "prometheusaeron"
         command: >
             bash -c "java -cp /opt/aeron-prometheus-stats/lib/aeron-prometheus-stats-all-1.0-SNAPSHOT.jar\

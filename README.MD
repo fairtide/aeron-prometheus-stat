@@ -112,6 +112,51 @@ metric | description
 |num_clients|received packets|
 
 
+###Example with prometheus and grafphana
+
+**1. Get the docker images**
+
+```$xslt
+docker build -t prometheusaeron .
+```
+```$xslt
+docker pull prom/prometheus
+```
+```$xslt
+docker pull grafana/grafana
+```
+**2. Run Aeron Media Driver, Prometheus, Aeron-prometheus-stats and grafphana**
+
+**Aeron-prometheus-stats**
+
+```$xslt
+ PROMETHEUS_PORT=1234 DAERON_DIR=/dev/shm/aeron-asd DELAY_SECONDS=4   docker-compose -f docker-compose.yml up
+```
+
+**Prometheus** - [Link](https://docs.docker.com/config/thirdparty/prometheus/#configure-and-run-prometheus)
+
+```$xslt
+docker run --name my-prometheus \
+    --mount type=bind,source=/home/wlip/Documents/Aeron/aeron-prometheus-stats/examples/prometheus.yml,destination=/etc/prometheus/prometheus.yml \
+    --network host \
+    -p 9090:9090 prom/prometheus
+```
+
+**Grafana** - [Link](http://docs.grafana.org/installation/docker/)
+
+```$xslt
+docker run \
+  -p 3000:3000 \
+  --name=grafana \
+  -v <PATH_TO_REPO>/examples/grafana-storage:/var/lib/grafana \
+  --network host \
+  --user 1000 \
+  grafana/grafana
+```
+
+![alt text](https://raw.githubusercontent.com/fairtide/aeron-prometheus-stat/develop/examples/Screenshots/GrafanaExample.png)
+
+
 ## Licence (See LICENSE file for full license)
 Copyright 2018 Fairtide Pte. Ltd.
 
