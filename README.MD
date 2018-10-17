@@ -20,8 +20,6 @@ java -cp build/libs/aeron-prometheus-stats-all-1.0-SNAPSHOT.jar -Daeron.dir=<sam
 
 ### Docker:
 
-The rabbitmq_exporter is sharing the network interface with the rabbitmq container -> it is possible to use localhost and default user/password (guest).
-
 1.  Run a [aeron media driver](https://github.com/real-logic/aeron) first.
 
 
