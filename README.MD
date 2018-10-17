@@ -11,7 +11,7 @@ Data is scraped by [prometheus](https://prometheus.io).
 ```
 ## Running Locally
 
-Firstly we will need to run a [aeron media driver](https://github.com/real-logic/aeron) first.
+Firstly we will need to run a [aeron media driver](https://github.com/real-logic/aeron).
 
 To run the stats exporter simply run the following while media driver is running. Delay is optional defaults to 1 second.
 ```$xslt
