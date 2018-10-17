@@ -41,7 +41,7 @@ Settings:
 Environment variable|default|description
 --------------------|-------|------------
 PROMETHEUS_PORT | No Default. Compulsory Argument| Port for prometheus to scrape.
-DAERON_DIR | [DAERON_DIR](https://github.com/real-logic/aeron) | Check link for [details](https://github.com/real-logic/aeron)
+DAERON_DIR | Aeron Default Path | Check link for [details](https://github.com/real-logic/aeron)
 DELAY_SECONDS | 1 second | Interval to query for stats. 
 
 
