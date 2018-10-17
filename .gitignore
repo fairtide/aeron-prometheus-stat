@@ -59,7 +59,6 @@ cmake-build-release/
 # IntelliJ
 out/
 build/
-.gradle/
 .idea/
 
 # mpeltonen/sbt-idea plugin
