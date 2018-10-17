@@ -1,0 +1,32 @@
+plugins {
+    id 'java'
+}
+
+group 'co.fairtide'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    compile group: 'io.aeron', name: 'aeron-driver', version: '1.11.1'
+    compile group: 'io.aeron', name: 'aeron-archive', version: '1.11.1'
+    compile group: 'io.prometheus', name: 'simpleclient', version: '0.5.0'
+    compile group: 'io.prometheus', name: 'simpleclient_hotspot', version: '0.5.0'
+    compile group: 'io.prometheus', name: 'simpleclient_httpserver', version: '0.5.0'
+}
+
+task fatJar(type: Jar) {
+    manifest {
+        attributes 'Implementation-Title': 'Gradle Jar File Example',
+                'Implementation-Version': version,
+                'Main-Class': 'com.mkyong.DateUtils'
+    }
+    baseName = project.name + '-all'
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
+}
