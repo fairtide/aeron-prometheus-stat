@@ -123,7 +123,7 @@ docker pull prom/prometheus
 ```$xslt
 docker pull grafana/grafana
 ```
-**2. Run Aeron Media Driver, Prometheus, Aeron-prometheus-stats and grafphana**
+**2. Run Aeron Media Driver, Prometheus, Aeron-prometheus-stats and grafana**
 
 **Aeron Media Driver**
 
