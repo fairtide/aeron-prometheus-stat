@@ -49,7 +49,7 @@ DELAY_SECONDS | 1 second | Interval to query for stats.
 
 ## Metrics
 
-Two main type of matrics are exposed 
+Two main type of metrics are exposed 
 
 1. **System Counters**
 
@@ -67,7 +67,7 @@ num_clients - Number of clients(subcriber and publisher) on media driver
 
 ### System Counters - Counter
 
-The name of the stats almost directly come from aeron [link](https://github.com/real-logic/aeron/blob/master/aeron-driver/src/main/java/io/aeron/driver/status/SystemCounterDescriptor.java). It is renamed to suit prometheus conventions.
+The name of the stats almost directly come from aeron ([link](https://github.com/real-logic/aeron/blob/master/aeron-driver/src/main/java/io/aeron/driver/status/SystemCounterDescriptor.java)) It is renamed to suit prometheus conventions.
 
 Command used to rename.
 ```$xslt
@@ -141,7 +141,7 @@ Run aeron media drivers, publisher and subcribers. [Link](https://github.com/rea
 
 ```$xslt
 docker run --name my-prometheus \
-    --mount type=bind,source=/home/wlip/Documents/Aeron/aeron-prometheus-stats/examples/prometheus.yml,destination=/etc/prometheus/prometheus.yml \
+    --mount type=bind,source=<PATH_TO_REPO>/examples/prometheus.yml,destination=/etc/prometheus/prometheus.yml \
     --network host \
     -p 9090:9090 prom/prometheus
 ```
