@@ -150,7 +150,7 @@ Run aeron media drivers, publisher and subcribers. [Link](https://github.com/rea
 **Aeron-prometheus-stats**
 
 ```$xslt
- PROMETHEUS_PORT=1234 DAERON_DIR=/dev/shm/aeron-asd docker-compose -f docker-compose.yml up
+ PROMETHEUS_PORT=1234 AERON_DIR=/dev/shm/aeron-asd docker-compose -f docker-compose.yml up
 ```
 
 **Prometheus** - [Link](https://docs.docker.com/config/thirdparty/prometheus/#configure-and-run-prometheus)
