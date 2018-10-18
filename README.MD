@@ -48,7 +48,7 @@ Settings:
 Environment variable|default|description
 --------------------|-------|------------
 PROMETHEUS_PORT | No Default. Compulsory Argument| Port for prometheus to scrape.
-AERON_DIR | Aeron Directory Path | Check link for [details](https://github.com/real-logic/aeron)
+AERON_DIR | No Default. Compulsory Argument | Check link for [details](https://github.com/real-logic/aeron)
  
 
 For delay and archive settings please manually change the run command in the docker compose file. Delay is set to 5 seconds in compose file. 
