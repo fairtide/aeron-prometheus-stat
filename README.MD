@@ -11,16 +11,21 @@ Data is scraped by [prometheus](https://prometheus.io).
 ```
 ## Running Locally
 
-Firstly we will need to run a [aeron media driver](https://github.com/real-logic/aeron) first.
+Firstly we will need to run a [aeron media driver](https://github.com/real-logic/aeron).
 
-To run the stats exporter simply run the following while media driver is running. Delay is optional defaults to 1 second.
+To run the stats exporter simply run the following while media driver is running. Delay is optional defaults to 5 second. Port is compulsory argument.
 ```$xslt
-java -cp build/libs/aeron-prometheus-stats-all-1.0-SNAPSHOT.jar -Daeron.dir=<same_directory_as_media_driver> co.fairtide.prometheus_aeron_stat.PrometheusAeronStat port=1234 delay=<in_seconds>
+java -cp build/libs/aeron-prometheus-stats-all-1.0-SNAPSHOT.jar -Daeron.dir=<same_directory_as_media_driver> co.fairtide.prometheus_aeron_stat.PrometheusAeronStat -port 1234 -delay <in_ms>
 ```
-
+You can also run with the archive option (Only works with ArchivingMediaDriver). This prints out to console the archive details.
+```$xslt
+java -cp build/libs/aeron-prometheus-stats-all-1.0-SNAPSHOT.jar -Daeron.dir=<same_directory_as_media_driver> co.fairtide.prometheus_aeron_stat.PrometheusAeronStat -port 1234 -delay <in_ms> -archive
+```
+To see the options you can run. 
+```$xslt
+java -cp build/libs/aeron-prometheus-stats-all-1.0-SNAPSHOT.jar  co.fairtide.prometheus_aeron_stat.PrometheusAeronStat -help
+```
 ### Docker:
-
-The rabbitmq_exporter is sharing the network interface with the rabbitmq container -> it is possible to use localhost and default user/password (guest).
 
 1.  Run a [aeron media driver](https://github.com/real-logic/aeron) first.
 
@@ -29,27 +34,29 @@ The rabbitmq_exporter is sharing the network interface with the rabbitmq contain
 
         docker build -t prometheusaeron .
         
-3. Run the docker image. Example configuration.
+3. Run the docker image. Configuration can be changed in docker-compose.yml file.
 
-        PROMETHEUS_PORT=1234 DAERON_DIR=/dev/shm/aeron-asd DELAY_SECONDS=4   docker-compose -f docker-compose.yml up
+        docker-compose -f docker-compose.yml up
 
 Now your metrics are exposed through http://host:1234/metrics.
 
-## Docker Configuration
+## Configuration
 
-Uses environment variables for configuration.
-Settings:
+For delay and archive settings please manually change the run command in the docker compose file. Delay is set to 5 seconds in compose file. 
+And archive is not being set. 
 
-Environment variable|default|description
---------------------|-------|------------
-PROMETHEUS_PORT | No Default. Compulsory Argument| Port for prometheus to scrape.
-DAERON_DIR | [DAERON_DIR](https://github.com/real-logic/aeron) | Check link for [details](https://github.com/real-logic/aeron)
-DELAY_SECONDS | 1 second | Interval to query for stats. 
+Example of changing delay to 10 seconds and to print logs of ArchivingMediaDriver
+
+```$xslt
+        command: >
+            bash -c "java -cp /opt/aeron-prometheus-stats/lib/aeron-prometheus-stats-all-1.0-SNAPSHOT.jar\
+             -Daeron.dir=/dev/shm/aeron co.fairtide.prometheus_aeron_stat.PrometheusAeronStat -port 50051 -delay 10000 -archive"
+```
 
 
 ## Metrics
 
-Two main type of matrics are exposed 
+Two main type of metrics are exposed 
 
 1. **System Counters**
 
@@ -67,7 +74,7 @@ num_clients - Number of clients(subcriber and publisher) on media driver
 
 ### System Counters - Counter
 
-The name of the stats almost directly come from aeron [link](https://github.com/real-logic/aeron/blob/master/aeron-driver/src/main/java/io/aeron/driver/status/SystemCounterDescriptor.java). It is renamed to suit prometheus conventions.
+The name of the stats almost directly come from aeron ([link](https://github.com/real-logic/aeron/blob/master/aeron-driver/src/main/java/io/aeron/driver/status/SystemCounterDescriptor.java)) It is renamed to suit prometheus conventions.
 
 Command used to rename.
 ```$xslt
@@ -110,6 +117,76 @@ metric | description
 |num_channel|number of channels in use|
 |num_subscribers|received bytes|
 |num_clients|received packets|
+
+
+### Example with prometheus and grafhana
+
+**1. Get the docker images**
+
+```$xslt
+docker build -t prometheusaeron .
+```
+```$xslt
+docker pull prom/prometheus
+```
+```$xslt
+docker pull grafana/grafana
+```
+**2. Run Aeron Media Driver, Prometheus, Aeron-prometheus-stats and grafana**
+
+**Aeron Media Driver**
+
+Run aeron media drivers, publisher and subcribers. [Link](https://github.com/real-logic/aeron)
+
+**Aeron-prometheus-stats**
+
+Configure the exposed port for prometheus and Aeron Directory in the docker-compose.yml file.
+
+```$xslt
+docker-compose -f docker-compose.yml up
+```
+
+**Prometheus** - [Link](https://docs.docker.com/config/thirdparty/prometheus/#configure-and-run-prometheus)
+
+```$xslt
+docker run --name my-prometheus \
+    --mount type=bind,source=<PATH_TO_REPO>/examples/prometheus.yml,destination=/etc/prometheus/prometheus.yml \
+    --network host \
+    -p 9090:9090 prom/prometheus
+```
+
+**Grafana** - [Link](http://docs.grafana.org/installation/docker/)
+
+```$xslt
+docker run \
+  -p 3000:3000 \
+  --name=grafana \
+  --network host \
+  --user 1000 \
+  grafana/grafana
+```
+
+Navigate to [localhost:3000](http://localhost:3000)
+
+User:admin
+
+pass:admin
+
+**Add prometheus as data source**
+
+
+
+Then navigate to aeron-prometheus-stats dashboard with the below settings
+
+![alt text](https://raw.githubusercontent.com/fairtide/aeron-prometheus-stat/develop/examples/screenshots/grafana-data-settings.png)
+
+Then import the dashboard from <path_to_repo>/examples/grafana-aeron-dashboard.json
+
+Example [link](http://docs.grafana.org/reference/export_import/)
+
+This is how it should look like
+
+![alt text](https://raw.githubusercontent.com/fairtide/aeron-prometheus-stat/develop/examples/screenshots/grafana-example.png)
 
 
 ## Licence (See LICENSE file for full license)
