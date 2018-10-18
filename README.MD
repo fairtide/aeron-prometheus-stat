@@ -178,7 +178,7 @@ pass:admin
 
 Then navigate to aeron-prometheus-stats dashboard with the below settings
 
-![alt text](https://raw.githubusercontent.com/fairtide/aeron-prometheus-stat/develop/examples/Screenshots/grafana-data-settings.png)
+![alt text](https://raw.githubusercontent.com/fairtide/aeron-prometheus-stat/develop/examples/screenshots/grafana-data-settings.png)
 
 Then import the dashboard from <path_to_repo>/examples/grafana-aeron-dashboard.json
 
@@ -186,7 +186,7 @@ Example [link](http://docs.grafana.org/reference/export_import/)
 
 This is how it should look like
 
-![alt text](https://raw.githubusercontent.com/fairtide/aeron-prometheus-stat/develop/examples/Screenshots/grafana-example.png)
+![alt text](https://raw.githubusercontent.com/fairtide/aeron-prometheus-stat/develop/examples/screenshots/grafana-example.png)
 
 
 ## Licence (See LICENSE file for full license)
