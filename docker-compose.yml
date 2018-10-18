@@ -19,9 +19,15 @@ services:
         image: "prometheusaeron"
         command: >
             bash -c "java -cp /opt/aeron-prometheus-stats/lib/aeron-prometheus-stats-all-1.0-SNAPSHOT.jar\
-             -Daeron.dir=${AERON_DIR} co.fairtide.prometheus_aeron_stat.PrometheusAeronStat -port 50051 -delay 5000"
+             -Daeron.dir=/dev/shm/aeron-test co.fairtide.prometheus_aeron_stat.PrometheusAeronStat -port 50051 -delay 5000"
         ports:
-        - "${PROMETHEUS_PORT}:50051"
+        - "1234:50051"
         shm_size: 1G
         volumes:
-        - ${AERON_DIR}:${AERON_DIR}
+        - /dev/shm/aeron-test:/dev/shm/aeron-test
+
+
+    docker run --name my-prometheus \
+    --mount type=bind,source=/home/wlip/Documents/Aeron/aeron-prometheus-stat/examples/prometheus.yml,destination=/etc/prometheus/prometheus.yml \
+    --network host \
+    -p 9090:9090 prom/prometheus

@@ -36,20 +36,11 @@ java -cp build/libs/aeron-prometheus-stats-all-1.0-SNAPSHOT.jar  co.fairtide.pro
         
 3. Run the docker image. Example configuration. To change any other command 
 
-        PROMETHEUS_PORT=1234 AERON_DIR=/dev/shm/aeron-asd docker-compose -f docker-compose.yml up
+        docker-compose -f docker-compose.yml up
 
 Now your metrics are exposed through http://host:1234/metrics.
 
-## Docker Configuration
-
-Uses environment variables for configuration.
-Settings:
-
-Environment variable|default|description
---------------------|-------|------------
-PROMETHEUS_PORT | No Default. Compulsory Argument| Port for prometheus to scrape.
-AERON_DIR | No Default. Compulsory Argument | Check link for [details](https://github.com/real-logic/aeron)
- 
+## Configuration
 
 For delay and archive settings please manually change the run command in the docker compose file. Delay is set to 5 seconds in compose file. 
 And archive is not being set. 
@@ -128,7 +119,7 @@ metric | description
 |num_clients|received packets|
 
 
-### Example with prometheus and grafphana
+### Example with prometheus and grafhana
 
 **1. Get the docker images**
 
@@ -149,8 +140,10 @@ Run aeron media drivers, publisher and subcribers. [Link](https://github.com/rea
 
 **Aeron-prometheus-stats**
 
+Configure the exposed port for prometheus and Aeron Directory in the docker-compose.yml file.
+
 ```$xslt
- PROMETHEUS_PORT=1234 AERON_DIR=/dev/shm/aeron docker-compose -f docker-compose.yml up
+docker-compose -f docker-compose.yml up
 ```
 
 **Prometheus** - [Link](https://docs.docker.com/config/thirdparty/prometheus/#configure-and-run-prometheus)
@@ -168,7 +161,6 @@ docker run --name my-prometheus \
 docker run \
   -p 3000:3000 \
   --name=grafana \
-  -v <PATH_TO_REPO>/examples/grafana-storage:/var/lib/grafana \
   --network host \
   --user 1000 \
   grafana/grafana
@@ -180,9 +172,21 @@ User:admin
 
 pass:admin
 
-Then navigate to aeron-prometheus-stats dashboard.
+**Add prometheus as data source**
 
-![alt text](https://raw.githubusercontent.com/fairtide/aeron-prometheus-stat/develop/examples/Screenshots/GrafanaExample.png)
+
+
+Then navigate to aeron-prometheus-stats dashboard with the below settings
+
+![alt text](https://raw.githubusercontent.com/fairtide/aeron-prometheus-stat/develop/examples/Screenshots/grafana-data-settings.png)
+
+Then import the dashboard from <path_to_repo>/examples/grafana-aeron-dashboard.json
+
+Example [link](http://docs.grafana.org/reference/export_import/)
+
+This is how it should look like
+
+![alt text](https://raw.githubusercontent.com/fairtide/aeron-prometheus-stat/develop/examples/Screenshots/grafana-example.png)
 
 
 ## Licence (See LICENSE file for full license)
