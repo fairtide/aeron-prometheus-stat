@@ -34,7 +34,7 @@ java -cp build/libs/aeron-prometheus-stats-all-1.0-SNAPSHOT.jar  co.fairtide.pro
 
         docker build -t prometheusaeron .
         
-3. Run the docker image. Example configuration. To change any other command 
+3. Run the docker image. Configuration can be changed in docker-compose.yml file.
 
         docker-compose -f docker-compose.yml up
 
