@@ -60,6 +60,7 @@ cmake-build-release/
 out/
 build/
 .idea/
+.gradle/
 
 # mpeltonen/sbt-idea plugin
 .idea_modules/

@@ -25,6 +25,10 @@ import org.agrona.DirectBuffer;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.SigInt;
 import org.agrona.concurrent.status.CountersReader;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.Options;
 
 import java.io.File;
 import java.nio.MappedByteBuffer;
@@ -34,14 +38,23 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.aeron.CncFileDescriptor.*;
 
-
+import static io.aeron.driver.status.PublisherLimit.PUBLISHER_LIMIT_TYPE_ID;
+import static io.aeron.driver.status.SystemCounterDescriptor.SYSTEM_COUNTER_TYPE_ID;
+import static io.aeron.driver.status.SubscriberPos.SUBSCRIBER_POSITION_TYPE_ID;
+import static io.aeron.driver.status.ClientHeartbeatStatus.CLIENT_HEARTBEAT_TYPE_ID;
 
 public class PrometheusAeronStat {
-    /**
-     * The delay in seconds between each update.
-     */
+
     private static final String DELAY = "delay";
     private static final String PROMETHUES_EXPORTER_PORT = "port";
+    private static final String HELP_STR = "help";
+    private static final String GET_ARCHIVE_STR = "archive";
+    private static final String HELP_MSG = "[-aeron.dir=<directory containing CnC file>] PrometheusAeronStat" +
+            "\tUsage: [-port <port for prometheus server COMPULSORY>]" +
+            "\t[-delay <seconds between updates>]%n" +
+            "\t[-archive]%n" +
+            "\t";
+
 
     private CountersReader counters;
     private HashMap<String, Counter> prometheusCounterMap;
@@ -64,7 +77,7 @@ public class PrometheusAeronStat {
 
     public static CountersReader mapCounters() {
         final File cncFile = CommonContext.newDefaultCncFile();
-        System.out.println("Command `n Control file " + cncFile);
+        System.out.println("Command n Control file path is: " + cncFile);
 
         final MappedByteBuffer cncByteBuffer = IoUtil.mapExistingFile(cncFile, "cnc");
         final DirectBuffer cncMetaData = createMetaDataBuffer(cncByteBuffer);
@@ -82,42 +95,29 @@ public class PrometheusAeronStat {
     }
 
     public static void main(final String[] args) throws Exception {
-        long delayMs = 1000L;
-        int portNumber = -1;
+        long delayMs = 5000L;
+        int portNumber;
+        boolean getArchive;
 
-        if (0 != args.length) {
-            checkForHelp(args);
-            for (final String arg : args) {
-                final int equalsIndex = arg.indexOf('=');
-                if (-1 == equalsIndex) {
-                    System.out.println("Arguments must be in name=pattern format: Invalid '" + arg + "'");
-                    return;
-                }
-                final String argName = arg.substring(0, equalsIndex);
-                final String argValue = arg.substring(equalsIndex + 1);
+        Options options = new Options();
+        options.addOption(DELAY, true, "Frequency to query for statistics in milliseconds");
+        options.addOption(PROMETHUES_EXPORTER_PORT, true, "Port to expose prometheus statistics");
+        options.addOption(HELP_STR, false, "Print out example usage.");
+        options.addOption(GET_ARCHIVE_STR, false, "Get archive logs.");
 
-                switch (argName) {
-                    case DELAY:
-                        delayMs = Long.parseLong(argValue) * 1000L;
-                        break;
-                    case PROMETHUES_EXPORTER_PORT:
-                        portNumber = Integer.parseInt(argValue);
-                        break;
-                    default:
-                        System.out.println("Unrecognised argument: '" + arg + "'");
-//                        return;
-                }
-            }
-        }
-        if (portNumber == -1) {
-            System.out.println("Port to expose prometheues statistics is a compulsory argument");
-            System.out.println(
-                    "Usage: [port=<port for prometheus server COMPULSORY>]" +
-                            "\t[delay=<seconds between updates>]%n" +
-                            "\t[-Daeron.dir=<directory containing CnC file>] ");
+        CommandLineParser parser = new DefaultParser();
+        CommandLine cmd = parser.parse(options, args);
+
+        if (cmd.hasOption(HELP_STR) || !cmd.hasOption(PROMETHUES_EXPORTER_PORT)) {
+            System.out.println(HELP_MSG);
             System.exit(0);
-            return;
         }
+        if (cmd.hasOption(DELAY)){
+            delayMs = Long.parseLong(cmd.getOptionValue(DELAY));
+        }
+
+        getArchive = cmd.hasOption(GET_ARCHIVE_STR);
+        portNumber = Integer.parseInt(cmd.getOptionValue(PROMETHUES_EXPORTER_PORT));
 
         HTTPServer prometheusServer = new HTTPServer(portNumber);
 
@@ -125,23 +125,26 @@ public class PrometheusAeronStat {
         final AtomicBoolean running = new AtomicBoolean(true);
         SigInt.register(() -> running.set(false));
 
-        while (running.get()) {
-            prometheusAeronStat.updatePrometheus();
-            Thread.sleep(delayMs);
-        }
-// TODO Add archive logs when martin thompson fixes the bug https://github.com/real-logic/aeron/issues/565
-//        try (AeronArchive archive = AeronArchive.connect()) {
-//            while (running.get()) {
-//                prometheusAeronStat.updatePrometheus();
-//                prometheusAeronStat.printArchiveLogs(archive);
-//                Thread.sleep(delayMs);
-//            }
-//
-//        } catch (Exception e) {
-//            System.out.println(e);
-//        }
-        prometheusServer.stop();
+        if (!getArchive) {
+            while (running.get()) {
+                prometheusAeronStat.updatePrometheus();
+                Thread.sleep(delayMs);
+            }
+        } else {
 
+            final AeronArchive.Context archiveCtx = new AeronArchive.Context()
+                    .controlResponseStreamId(AeronArchive.Configuration.controlResponseStreamId() + 1);
+            try (AeronArchive archive = AeronArchive.connect(archiveCtx)) {
+                while (running.get()) {
+                    prometheusAeronStat.updatePrometheus();
+                    prometheusAeronStat.printArchiveLogs(archive);
+                    Thread.sleep(delayMs);
+                }
+            } catch (Exception e) {
+                System.out.println(e);
+            }
+        }
+        prometheusServer.stop();
     }
 
 
@@ -151,41 +154,22 @@ public class PrometheusAeronStat {
                 (counterId, typeId, keyBuffer, label) ->
                 {
                     switch (typeId) {
-                        case 0:
+                        case SYSTEM_COUNTER_TYPE_ID:
                             this.updateSystemCounter(counters, counterId, typeId, label);
                             break;
-                        case 1:
+                        case PUBLISHER_LIMIT_TYPE_ID:
                             this.numChannelPublishingCounter++;
                             break;
-                        case 2:
-                            break;
-                        case 3:
-                            break;
-                        case 4:
+                        case SUBSCRIBER_POSITION_TYPE_ID:
                             this.numSubscriberCounter++;
                             break;
-                        case 5:
-                            break;
-                        case 6:
-                            break;
-                        case 7:
-                            break;
-                        case 9:
-                            break;
-                        case 10:
-                            break;
-                        case 11:
-                            System.out.println(label);
+                        case CLIENT_HEARTBEAT_TYPE_ID:
                             this.numClientCounter++;
                             break;
                         default:
                             break;
                     }
                 });
-        System.out.println("Lol: " + this.numChannelPublishingCounter);
-        System.out.println("Lol: " + this.numSubscriberCounter);
-        System.out.println("Lol: " + this.numClientCounter);
-
         this.numChannelPublishingGauge.set(this.numChannelPublishingCounter);
         this.numSubscriberGauge.set(this.numSubscriberCounter);
         this.numClientGauge.set(this.numClientCounter);
@@ -211,7 +195,7 @@ public class PrometheusAeronStat {
                  sourceIdentity) -> {
                     System.out.format("[recordingId]: %d, " +
                                     "[Timestamp]: [%d, %d], [startPosition]: %d, [stopPosition]: %d, [initialTermId]: %d, " +
-                                    "[segmentFileLength]: %d, [sessionId]: %d, [streamId]: %d, [originalChannel]: %s" +
+                                    "[segmentFileLength]: %d, [sessionId]: %d, [streamId]: %d, [originalChannel]: %s, " +
                                     "[SourceIdentity]: %s\n"
                             , recordingId, startTimestamp, stopTimestamp,
                             startPosition, stopPosition, initialTermId,
@@ -220,7 +204,7 @@ public class PrometheusAeronStat {
                 };
         //Print 100k recordings can be parameterize
         final long fromRecordingId = 0L;
-        final int recordCount = 100000;
+        final int recordCount = 1000;
         final int foundCount = archive.listRecordings(fromRecordingId, recordCount, consumer);
         System.out.println("Number of recording is: " + foundCount);
     }
@@ -246,18 +230,5 @@ public class PrometheusAeronStat {
         this.numChannelPublishingCounter = 0;
         this.numSubscriberCounter = 0;
         this.numClientCounter = 0;
-    }
-
-
-    private static void checkForHelp(final String[] args) {
-        for (final String arg : args) {
-            if ("-?".equals(arg) || "-h".equals(arg) || "-help".equals(arg)) {
-                System.out.println(
-                        "Usage: [port=<port for prometheus server COMPULSORY>]" +
-                                "\t[delay=<seconds between updates>]%n" +
-                                "\t[-Daeron.dir=<directory containing CnC file>] ");
-                System.exit(0);
-            }
-        }
     }
 }

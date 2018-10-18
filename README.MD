@@ -13,11 +13,18 @@ Data is scraped by [prometheus](https://prometheus.io).
 
 Firstly we will need to run a [aeron media driver](https://github.com/real-logic/aeron).
 
-To run the stats exporter simply run the following while media driver is running. Delay is optional defaults to 1 second.
+To run the stats exporter simply run the following while media driver is running. Delay is optional defaults to 5 second. Port is compulsory argument.
 ```$xslt
-java -cp build/libs/aeron-prometheus-stats-all-1.0-SNAPSHOT.jar -Daeron.dir=<same_directory_as_media_driver> co.fairtide.prometheus_aeron_stat.PrometheusAeronStat port=1234 delay=<in_seconds>
+java -cp build/libs/aeron-prometheus-stats-all-1.0-SNAPSHOT.jar -Daeron.dir=<same_directory_as_media_driver> co.fairtide.prometheus_aeron_stat.PrometheusAeronStat -port 1234 -delay <in_ms>
 ```
-
+You can also run with the archive option (Only works with ArchivingMediaDriver). This prints out to console the archive details.
+```$xslt
+java -cp build/libs/aeron-prometheus-stats-all-1.0-SNAPSHOT.jar -Daeron.dir=<same_directory_as_media_driver> co.fairtide.prometheus_aeron_stat.PrometheusAeronStat -port 1234 -delay <in_ms> -archive
+```
+To see the options you can run. 
+```$xslt
+java -cp build/libs/aeron-prometheus-stats-all-1.0-SNAPSHOT.jar  co.fairtide.prometheus_aeron_stat.PrometheusAeronStat -help
+```
 ### Docker:
 
 1.  Run a [aeron media driver](https://github.com/real-logic/aeron) first.
@@ -27,9 +34,9 @@ java -cp build/libs/aeron-prometheus-stats-all-1.0-SNAPSHOT.jar -Daeron.dir=<sam
 
         docker build -t prometheusaeron .
         
-3. Run the docker image. Example configuration.
+3. Run the docker image. Example configuration. To change any other command 
 
-        PROMETHEUS_PORT=1234 DAERON_DIR=/dev/shm/aeron-asd DELAY_SECONDS=4   docker-compose -f docker-compose.yml up
+        PROMETHEUS_PORT=1234 AERON_DIR=/dev/shm/aeron-asd docker-compose -f docker-compose.yml up
 
 Now your metrics are exposed through http://host:1234/metrics.
 
@@ -41,8 +48,19 @@ Settings:
 Environment variable|default|description
 --------------------|-------|------------
 PROMETHEUS_PORT | No Default. Compulsory Argument| Port for prometheus to scrape.
-DAERON_DIR | Aeron Default Path | Check link for [details](https://github.com/real-logic/aeron)
-DELAY_SECONDS | 1 second | Interval to query for stats. 
+AERON_DIR | Aeron Directory Path | Check link for [details](https://github.com/real-logic/aeron)
+ 
+
+For delay and archive settings please manually change the run command in the docker compose file. Delay is set to 5 seconds in compose file. 
+And archive is not being set. 
+
+Example of changing delay to 10 seconds and to print logs of ArchivingMediaDriver
+
+```$xslt
+        command: >
+            bash -c "java -cp /opt/aeron-prometheus-stats/lib/aeron-prometheus-stats-all-1.0-SNAPSHOT.jar\
+             -Daeron.dir=/dev/shm/aeron co.fairtide.prometheus_aeron_stat.PrometheusAeronStat -port 50051 -delay 10000 -archive"
+```
 
 
 ## Metrics
@@ -132,7 +150,7 @@ Run aeron media drivers, publisher and subcribers. [Link](https://github.com/rea
 **Aeron-prometheus-stats**
 
 ```$xslt
- PROMETHEUS_PORT=1234 DAERON_DIR=/dev/shm/aeron-asd DELAY_SECONDS=4   docker-compose -f docker-compose.yml up
+ PROMETHEUS_PORT=1234 DAERON_DIR=/dev/shm/aeron-asd docker-compose -f docker-compose.yml up
 ```
 
 **Prometheus** - [Link](https://docs.docker.com/config/thirdparty/prometheus/#configure-and-run-prometheus)
