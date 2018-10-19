@@ -25,9 +25,3 @@ services:
         shm_size: 1G
         volumes:
         - /dev/shm/aeron:/dev/shm/aeron
-
-
-    docker run --name my-prometheus \
-    --mount type=bind,source=/home/wlip/Documents/Aeron/aeron-prometheus-stat/examples/prometheus.yml,destination=/etc/prometheus/prometheus.yml \
-    --network host \
-    -p 9090:9090 prom/prometheus

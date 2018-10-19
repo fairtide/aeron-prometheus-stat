@@ -186,7 +186,12 @@ Example [link](http://docs.grafana.org/reference/export_import/)
 
 This is how it should look like
 
+![alt text](https://raw.githubusercontent.com/fairtide/aeron-prometheus-stat/master/examples/screenshots/grafana-example-2.png)
+
+
 ![alt text](https://raw.githubusercontent.com/fairtide/aeron-prometheus-stat/master/examples/screenshots/grafana-example.png)
+
+
 
 
 ## Licence (See LICENSE file for full license)
