@@ -1,0 +1,13 @@
+# add the local prometheus as default data source in grafana
+# see https://grafana.com/docs/grafana/latest/administration/provisioning/
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus
+    url: http://prometheus:9090
+    isDefault: true
+    version: 1
+    editable: true
+    jsonData:
+      timeInterval: 5s

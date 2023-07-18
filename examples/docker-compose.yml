@@ -1,0 +1,52 @@
+networks:
+  trading:
+    name: trading_net
+services:
+  prometheus:
+    # information on the container image can be found here:
+    # https://hub.docker.com/r/prom/prometheus
+    # https://github.com/prometheus/prometheus
+    # this image is available for linux/amd64 and linux/arm64/v8
+    image: docker.io/prom/prometheus:v2.42.0
+    hostname: prometheus
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - trading
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus:/etc/prometheus/
+  grafana:
+    # information on the container image can be found here:
+    # https://hub.docker.com/r/grafana/grafana-oss
+    # https://grafana.com/docs/grafana/latest/installation/docker/
+    # this image is available for linux/amd64 and linux/arm64/v8
+    image: docker.io/grafana/grafana-oss:9.3.6
+    hostname: grafana
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - trading
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+
+  aeron-prometheus:
+    image: prometheusaeron
+    hostname: prometheusaeron
+    command: >
+      bash -c "java -cp /opt/aeron-prometheus-stats/lib/aeron-prometheus-stats-all-1.0-SNAPSHOT.jar -Daeron.dir=/dev/shm/aeron/ co.fairtide.prometheus_aeron_stat.PrometheusAeronStat -port 50051 -delay 5000"
+    ports:
+      - "1234:50051"
+    shm_size: 1G
+    networks:
+      - trading
+    volumes:
+      - /Volumes/DevShm/-0-driver:/dev/shm/aeron

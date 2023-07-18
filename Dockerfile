@@ -16,7 +16,7 @@
 
 FROM alpine:latest
 
-RUN apk add bash git openjdk8
+RUN apk add bash git openjdk13
 
 COPY . /aeron-prometheus-stats/
 
