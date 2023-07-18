@@ -15,20 +15,16 @@
  */
 package co.fairtide.prometheus_aeron_stat;
 
-import io.aeron.CommonContext;
-import io.aeron.archive.client.AeronArchive;
-import io.aeron.archive.client.RecordingDescriptorConsumer;
-import io.prometheus.client.Counter;
-import io.prometheus.client.Gauge;
-import io.prometheus.client.exporter.HTTPServer;
-import org.agrona.DirectBuffer;
-import org.agrona.IoUtil;
-import org.agrona.concurrent.SigInt;
-import org.agrona.concurrent.status.CountersReader;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.Options;
+import static io.aeron.AeronCounters.DRIVER_HEARTBEAT_TYPE_ID;
+import static io.aeron.CncFileDescriptor.CNC_VERSION;
+import static io.aeron.CncFileDescriptor.cncVersionOffset;
+import static io.aeron.CncFileDescriptor.createCountersMetaDataBuffer;
+import static io.aeron.CncFileDescriptor.createCountersValuesBuffer;
+import static io.aeron.CncFileDescriptor.createMetaDataBuffer;
+import static io.aeron.CommonContext.newDefaultCncFile;
+import static io.aeron.driver.status.PublisherLimit.PUBLISHER_LIMIT_TYPE_ID;
+import static io.aeron.driver.status.SubscriberPos.SUBSCRIBER_POSITION_TYPE_ID;
+import static io.aeron.driver.status.SystemCounterDescriptor.SYSTEM_COUNTER_TYPE_ID;
 
 import java.io.File;
 import java.nio.MappedByteBuffer;
@@ -36,13 +32,21 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static io.aeron.CncFileDescriptor.*;
+import org.agrona.DirectBuffer;
+import org.agrona.IoUtil;
+import org.agrona.concurrent.status.CountersReader;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.Options;
 
-import static io.aeron.driver.status.PublisherLimit.PUBLISHER_LIMIT_TYPE_ID;
-import static io.aeron.driver.status.SystemCounterDescriptor.SYSTEM_COUNTER_TYPE_ID;
-import static io.aeron.driver.status.SubscriberPos.SUBSCRIBER_POSITION_TYPE_ID;
+import io.aeron.archive.client.AeronArchive;
+import io.aeron.archive.client.RecordingDescriptorConsumer;
+import io.prometheus.client.Counter;
+import io.prometheus.client.Gauge;
+import io.prometheus.client.exporter.HTTPServer;
 
-public class PrometheusAeronStat{
+public class PrometheusAeronStat {
 
     private static final String DELAY = "delay";
     private static final String PROMETHUES_EXPORTER_PORT = "port";
@@ -54,8 +58,8 @@ public class PrometheusAeronStat{
             "\t[-archive]%n" +
             "\t";
 
+    private static final AtomicBoolean RUNNING = new AtomicBoolean(true);
 
-    private CountersReader counters;
     private HashMap<String, Counter> prometheusCounterMap;
     private int numChannelPublishingCounter;
     private int numSubscriberCounter;
@@ -66,17 +70,15 @@ public class PrometheusAeronStat{
     private Gauge numClientGauge;
 
 
-    public PrometheusAeronStat(CountersReader counters) {
-        this.counters = counters;
+    public PrometheusAeronStat() {
         this.prometheusCounterMap = new HashMap<>();
         this.numChannelPublishingGauge = Gauge.build().name("num_channel").help("num_channel").register();
         this.numSubscriberGauge = Gauge.build().name("num_subscribers").help("num_channel").register();
         this.numClientGauge = Gauge.build().name("num_clients").help("num_channel").register();
     }
 
-    public static CountersReader mapCounters() {
-        final File cncFile = CommonContext.newDefaultCncFile();
-        System.out.println("Command n Control file path is: " + cncFile);
+
+    public static CountersReader mapCounters(final File cncFile) {
 
         final MappedByteBuffer cncByteBuffer = IoUtil.mapExistingFile(cncFile, "cnc");
         final DirectBuffer cncMetaData = createMetaDataBuffer(cncByteBuffer);
@@ -94,6 +96,9 @@ public class PrometheusAeronStat{
     }
 
     public static void main(final String[] args) throws Exception {
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {RUNNING.compareAndSet(true, false);}, "shutdown-hook"));
+
         long delayMs = 5000L;
         int portNumber;
         boolean getArchive;
@@ -117,27 +122,44 @@ public class PrometheusAeronStat{
 
         getArchive = cmd.hasOption(GET_ARCHIVE_STR);
         portNumber = Integer.parseInt(cmd.getOptionValue(PROMETHUES_EXPORTER_PORT));
-        HTTPServer prometheusServer = null;
-        try {
-            prometheusServer = new HTTPServer(portNumber);
-        } catch (Exception ex) {
-            final PrometheusAeronStat prometheusAeronStat = new PrometheusAeronStat(mapCounters());
-            final AtomicBoolean running = new AtomicBoolean(true);
-            SigInt.register(() -> running.set(false));
 
+
+        System.out.println("Command n Control file path is: " + newDefaultCncFile());
+
+        final HTTPServer prometheusServer = new HTTPServer(portNumber);
+        try {
+
+            final PrometheusAeronStat prometheusAeronStat = new PrometheusAeronStat();
+
+            long currentMs = System.currentTimeMillis();
             if (!getArchive) {
-                while (running.get()) {
-                    prometheusAeronStat.updatePrometheus();
-                    Thread.sleep(delayMs);
-                    System.out.println("Updated Prometheus");
+                while (RUNNING.get()) {
+
+                    prometheusAeronStat.updatePrometheus(mapCounters(newDefaultCncFile()));
+
+                    final long sleepUntilMs = currentMs + delayMs;
+                    while (System.currentTimeMillis() < sleepUntilMs) {
+
+                        final long sleepMs = sleepUntilMs - System.currentTimeMillis();
+                        if (sleepMs <= 0) {
+                            break;
+                        }
+
+                        try {
+                            Thread.sleep(delayMs);
+                        } catch (InterruptedException e) {
+                            // swallow the interrupt
+                        }
+                    }
+                    currentMs = sleepUntilMs;
                 }
             } else {
 
                 final AeronArchive.Context archiveCtx = new AeronArchive.Context()
                         .controlResponseStreamId(AeronArchive.Configuration.controlResponseStreamId() + 1);
                 try (AeronArchive archive = AeronArchive.connect(archiveCtx)) {
-                    while (running.get()) {
-                        prometheusAeronStat.updatePrometheus();
+                    while (RUNNING.get()) {
+                        prometheusAeronStat.updatePrometheus(mapCounters(newDefaultCncFile()));
                         prometheusAeronStat.printArchiveLogs(archive);
                         Thread.sleep(delayMs);
                     }
@@ -145,32 +167,37 @@ public class PrometheusAeronStat{
                     System.out.println(e);
                 }
             }
-        }
-        finally {
+        } finally {
             prometheusServer.close();
         }
     }
 
 
-    public void updatePrometheus() {
+    public void updatePrometheus(CountersReader counters) {
         this.clearOldCounter();
         counters.forEach(
                 (counterId, typeId, keyBuffer, label) ->
                 {
+                    System.out.println(label);
                     switch (typeId) {
                         case SYSTEM_COUNTER_TYPE_ID:
+                            System.out.println("\tsys");
                             this.updateSystemCounter(counters, counterId, typeId, label);
                             break;
                         case PUBLISHER_LIMIT_TYPE_ID:
+                            System.out.println("\tpub");
                             this.numChannelPublishingCounter++;
                             break;
                         case SUBSCRIBER_POSITION_TYPE_ID:
+                            System.out.println("\tsub");
                             this.numSubscriberCounter++;
                             break;
-                        //case CLIENT_HEARTBEAT_TYPE_ID:
-                        //    this.numClientCounter++;
-                        //    break;
+                        case DRIVER_HEARTBEAT_TYPE_ID:
+                            System.out.println("\tclient");
+                            this.numClientCounter++;
+                            break;
                         default:
+                            System.out.println("\t****");
                             break;
                     }
                 });
@@ -213,26 +240,28 @@ public class PrometheusAeronStat{
         System.out.println("Number of recording is: " + foundCount);
     }
 
-
     public void updateSystemCounter(CountersReader cr, int counterId, int typeId, String label) {
-        String tmpSmallLabel = label.replaceAll(" ", "_").toLowerCase();
-        String[] split=tmpSmallLabel.split(",");
-        String smallLabel=split[0];
-        if (smallLabel.contains("resolution_changes:_drivername=null_hostname=vft045") || smallLabel.contains("_work_cycle_exceeded_threshold_count")) {
-            return;
-        }
+        final String smallLabel = promLabel(label);
         Counter prometheusCounter;
-            if (prometheusCounterMap.get(smallLabel) == null) {
-                prometheusCounter = Counter.build().name(smallLabel).help(Integer.toString(typeId)).register();
-                prometheusCounterMap.put(smallLabel, prometheusCounter);
-            } else {
-                prometheusCounter = prometheusCounterMap.get(smallLabel);
-            }
-        //prometheusCounterMap.put(smallLabel, prometheusCounter);
+        if (prometheusCounterMap.get(smallLabel) == null) {
+            prometheusCounter = Counter.build().name(smallLabel).help(label).register();
+            prometheusCounterMap.put(smallLabel, prometheusCounter);
+        } else {
+            prometheusCounter = prometheusCounterMap.get(smallLabel);
+        }
+        prometheusCounterMap.put(smallLabel, prometheusCounter);
         final long currentValue = cr.getCounterValue(counterId);
         final double prevVal = prometheusCounter.get();
         final double diff = currentValue - prevVal;
         prometheusCounter.inc(diff);
+    }
+
+    private final String promLabel(String label) {
+        return label.replaceAll("[^a-zA-Z0-9_]", "_").toLowerCase();
+    }
+
+    private final String promHelp(final int counterId, final String label) {
+        return label;
     }
 
     public void clearOldCounter() {
@@ -240,5 +269,4 @@ public class PrometheusAeronStat{
         this.numSubscriberCounter = 0;
         this.numClientCounter = 0;
     }
-
 }

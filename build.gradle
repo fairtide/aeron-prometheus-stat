@@ -16,7 +16,7 @@
 plugins {
     id 'java'
 }
-apply plugin: 'idea'
+apply plugin: 'java'
 
 group 'co.fairtide'
 version '1.0-SNAPSHOT'
@@ -28,22 +28,22 @@ repositories {
 }
 
 dependencies {
-    testCompile group: 'junit', name: 'junit', version: '4.12'
-    compile group: 'io.aeron', name: 'aeron-driver', version: '1.41.4'
-    compile group: 'io.aeron', name: 'aeron-archive', version: '1.41.4'
-    compile group: 'io.prometheus', name: 'simpleclient', version: '0.16.0'
-    compile group: 'io.prometheus', name: 'simpleclient_hotspot', version: '0.16.0'
-    compile group: 'io.prometheus', name: 'simpleclient_httpserver', version: '0.16.0'
-    compile group: 'commons-cli', name: 'commons-cli', version: '1.4'
+    testImplementation group: 'junit', name: 'junit', version: '4.12'
+    implementation group: 'io.aeron', name: 'aeron-driver', version: '1.41.4'
+    implementation group: 'io.aeron', name: 'aeron-archive', version: '1.41.4'
+    implementation group: 'io.prometheus', name: 'simpleclient', version: '0.16.0'
+    implementation group: 'io.prometheus', name: 'simpleclient_hotspot', version: '0.16.0'
+    implementation group: 'io.prometheus', name: 'simpleclient_httpserver', version: '0.16.0'
+    implementation group: 'commons-cli', name: 'commons-cli', version: '1.4'
 }
 
 task fatJar(type: Jar) {
     manifest {
-        attributes 'Implementation-Title': 'Gradle Jar File Example',
+        attributes 'Implementation-Title': 'Prometheus Aeron Stat',
                 'Implementation-Version': version,
-                'Main-Class': 'com.mkyong.DateUtils'
+                'Main-Class': 'co.fairtide.prometheus_aeron_stat.PrometheusAeronStat'
     }
-    baseName = project.name + '-all'
-    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    archivesBaseName = project.name + '-all'
+    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
     with jar
 }
